@@ -1,0 +1,48 @@
+[package]
+name = "zaniu-tool"
+version = "0.1.0"
+edition = "2021"
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0.89"
+serde = { version = "1.0.207", features = ["derive"], optional = true }
+serde_json = { version = "1.0.124", optional = true }
+tracing = { version = "0.1.40", optional = true }
+tracing-subscriber = { version = "0.3.18", optional = true }
+tracing-appender = { version = "0.2.3", optional = true }
+sqlx = { version = "0.8.2", features = ["runtime-tokio-rustls", "mysql"], optional = true }
+chrono = { version = "0.4.38", optional = true }
+amqprs = { version = "2.0.0", optional = true }
+base64 = { version = "0.22.1", optional = true }
+async-trait = { version = "0.1.81", optional = true }
+log = { version = "0.4.22", optional = true }
+reqwest = { version = "0.12.5", features = ["json", "cookies", "rustls-tls", "multipart", "blocking"], default-features = false, optional = true }
+reqwest_cookie_store = { version = "0.8.0", optional = true }
+cookie_store = { version = "0.21.0", optional = true }
+hex = { version = "0.4.3", optional = true }
+ecb = { version = "0.1.2", optional = true }
+cbc = { version = "0.1.2", optional = true }
+aes = { version = "0.8.4", optional = true }
+lettre = { version = "0.11.9", features = ["builder", "smtp-transport", "tokio1-rustls-tls"], default-features = false, optional = true }
+derive_builder = { version = "0.20.0", optional = true }
+zip = { version = "2.2.0", features = ["deflate"], default-features = false, optional = true }
+mime = { version = "0.3.17", optional = true }
+blake3 = { version = "1.5.4", optional = true }
+paste = { version = "1.0.15", optional = true }
+rust_decimal = { version = "1.36.0", optional = true }
+calamine = { version = "0.26.1", optional = true }
+regex = { version = "1.10.5", optional = true }
+
+[features]
+default = ["zlog"]
+full = ["zlog", "database", "serialize", "session", "mq", "crypto", "mail", "zip", "xls_reader"]
+zlog = ["log", "tracing", "tracing-subscriber", "tracing-appender", "chrono"]
+database = ["sqlx", "log", "derive_builder", "serde"]
+serialize = ["serde", "serde_json", "paste", "rust_decimal"]
+session = ["reqwest", "reqwest_cookie_store", "cookie_store"]
+mq = ["amqprs", "base64", "log", "serde", "serde_json", "async-trait", "derive_builder"]
+mail = ["lettre", "derive_builder", "mime", "serde"]
+crypto = ["aes", "ecb", "cbc", "hex", "base64", "blake3"]
+foot_manager_spider = ["crypto", "reqwest"]
+xls_reader = ["calamine", "regex"]
