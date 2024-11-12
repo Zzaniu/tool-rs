@@ -35,7 +35,7 @@ calamine = { version = "0.26.1", optional = true }
 regex = { version = "1.11.1", optional = true }
 
 [features]
-default = ["full"]
+default = ["zlog"]
 full = ["zlog", "database", "serialize", "session", "mq", "crypto", "mail", "zip", "xls_reader"]
 zlog = ["log", "tracing", "tracing-subscriber", "tracing-appender", "chrono"]
 database = ["sqlx", "log", "derive_builder", "serde"]
