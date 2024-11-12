@@ -73,7 +73,9 @@ impl Session {
             return s;
         }
 
-        let cookie_store = cookie_store::CookieStore::load_json_all(&info[..]).unwrap();
+        let cookie_store =
+            cookie_store::CookieStore::load_all(&info[..], |cookie| serde_json::from_str(cookie))
+                .unwrap();
         let cookie = Arc::new(reqwest_cookie_store::CookieStoreMutex::new(cookie_store));
         let mut builder = Client::builder()
             .default_headers(get_head_map())
@@ -119,7 +121,7 @@ impl Session {
             .truncate(true)
             .open(self.store_cookie_path)?;
         cookie
-            .save_incl_expired_and_nonpersistent_json(&mut f)
+            .save_incl_expired_and_nonpersistent(&mut f, serde_json::to_string)
             .map_err(|err| anyhow!("cookie save error: {err:?}"))?;
         Ok(())
     }
