@@ -163,7 +163,7 @@ impl Mailer {
             AsyncSmtpTransport::<Tokio1Executor>::relay(self.server_url.as_str())
                 .map_err(|e| anyhow!("AsyncSmtpTransport::<Tokio1Executor>::relay 失败: {}", e))?
                 .credentials(Credentials::new(
-                    self.name.clone(),
+                    self.addr.clone(),
                     self.pass_word.to_owned(),
                 ))
                 .build(),
