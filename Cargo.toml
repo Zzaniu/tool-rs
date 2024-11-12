@@ -39,8 +39,8 @@ thiserror = { version = "2.0.3", optional = true }
 
 [features]
 default = ["zlog"]
-full = ["zlog", "database", "serialize", "session", "mq", "crypto", "mail", "zip", "xls_reader"]
-zlog = ["log", "tracing", "tracing-subscriber", "tracing-appender", "chrono", "sre_breaker"]
+full = ["zlog", "database", "serialize", "session", "mq", "crypto", "mail", "zip", "xls_reader", "sre_breaker"]
+zlog = ["log", "tracing", "tracing-subscriber", "tracing-appender", "chrono"]
 database = ["sqlx", "log", "derive_builder", "serde"]
 serialize = ["serde", "serde_json", "paste", "rust_decimal"]
 session = ["reqwest", "reqwest_cookie_store", "cookie_store", "serde_json"]
