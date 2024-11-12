@@ -66,13 +66,17 @@ impl MailInfo {
     }
 }
 
+fn default_mailer_name() -> &'static str {
+    "倍通邮件助手"
+}
+
 #[derive(Debug, Builder)]
 pub struct Mailer {
     #[builder(setter(into))]
     pub addr: String,
     #[builder(setter(into))]
     pub pass_word: String,
-    #[builder(setter(into), default="倍通邮件助手.to_string()")]
+    #[builder(setter(into), default = "default_mailer_name().to_string()")]
     pub name: String,
     #[builder(setter(into))]
     pub server_url: String,
@@ -146,7 +150,8 @@ impl Mailer {
         // note: 用户直接回复邮件时, reply-to 就是默认的收件人. 如果用户不指定它, from 就是默认的收件人
         Ok(Message::builder().from(Mailbox::new(
             Some(self.name.clone()),
-            self.addr.clone()
+            self.addr
+                .clone()
                 .parse::<Address>()
                 .map_err(|err| anyhow!("get_message_builder from 格式错误: {}", err))?,
         )))
@@ -154,14 +159,14 @@ impl Mailer {
 
     pub fn get_transporter(&self) -> AnyResult<AsyncSmtpTransport<Tokio1Executor>> {
         // TODO: 是否需要池化? 参考 pool_config
-        Ok(AsyncSmtpTransport::<Tokio1Executor>::relay(self.server_url.as_str())
-            .map_err(|e| anyhow!("AsyncSmtpTransport::<Tokio1Executor>::relay 失败: {}", e))?
-            .credentials(Credentials::new(
-                self.name.clone(),
-                self.pass_word.to_owned(),
-            ))
-            .build())
+        Ok(
+            AsyncSmtpTransport::<Tokio1Executor>::relay(self.server_url.as_str())
+                .map_err(|e| anyhow!("AsyncSmtpTransport::<Tokio1Executor>::relay 失败: {}", e))?
+                .credentials(Credentials::new(
+                    self.name.clone(),
+                    self.pass_word.to_owned(),
+                ))
+                .build(),
+        )
     }
 }
-
-
