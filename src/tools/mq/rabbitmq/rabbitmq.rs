@@ -1,6 +1,6 @@
-pub use amqprs::channel::Channel;
 use amqprs::channel::{
-    ConfirmSelectArguments, ExchangeDeclareArguments, QueueBindArguments, QueueDeclareArguments,
+    Channel, ConfirmSelectArguments, ExchangeDeclareArguments, QueueBindArguments,
+    QueueDeclareArguments,
 };
 use amqprs::{
     callbacks,
