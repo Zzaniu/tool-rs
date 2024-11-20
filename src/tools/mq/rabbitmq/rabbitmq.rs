@@ -13,12 +13,12 @@ use log::info;
 
 #[derive(Debug, Builder)]
 pub struct RabbitMqConnectInfo<'a> {
-    host: &'a str,
-    port: u16,
-    username: &'a str,
-    password: &'a str,
+    pub host: &'a str,
+    pub port: u16,
+    pub username: &'a str,
+    pub password: &'a str,
     #[builder(setter(into), default)]
-    virtual_host: Option<&'a str>,
+    pub virtual_host: Option<&'a str>,
 }
 
 impl<'a> RabbitMqConnectInfo<'a> {
