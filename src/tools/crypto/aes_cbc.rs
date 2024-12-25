@@ -84,3 +84,24 @@ pub fn cbc_decrypt_base64<C: KeyIvInit + BlockDecryptMut>(
             .map_err(|err| anyhow!("base64 decode error, err = {}", err))
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const KEY: &str = "HvL%$o0oN*oOZnk#o2/bqCeQB+iXeIR!";
+
+    #[test]
+    fn test_aes_cbc_encrypt() {
+        let s = "abcd";
+        let x = cbc_encrypt_hex::<Aes256CbcEnc>(KEY, &KEY[..16], s).unwrap();
+        assert_eq!(x, "b34114bd0e552587ac124392cb44d1e2");
+    }
+
+    #[test]
+    fn test_aes_cbc_decrypt() {
+        let x = "b34114bd0e552587ac124392cb44d1e2";
+        let s = cbc_decrypt_hex::<Aes256CbcDec>(KEY, &KEY[..16], x).unwrap();
+        assert_eq!(s, "abcd");
+    }
+}

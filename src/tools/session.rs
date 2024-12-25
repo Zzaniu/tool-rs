@@ -3,6 +3,7 @@ pub use cookie_store;
 pub use reqwest;
 use reqwest::header::{HeaderMap, HeaderValue};
 use reqwest::Client;
+pub use reqwest_cookie_store;
 use std::ops::Deref;
 use std::sync::Arc;
 use std::time::Duration;
@@ -92,7 +93,7 @@ impl Session {
     }
 
     /// 获取 cookie
-    pub fn gey_cookie(&self) -> cookie_store::CookieStore {
+    pub fn get_cookie(&self) -> cookie_store::CookieStore {
         let cookie = self.cookie.lock();
         cookie.unwrap().clone()
     }
