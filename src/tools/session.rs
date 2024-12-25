@@ -119,6 +119,7 @@ impl Session {
             .map_err(|err| anyhow!("cookie lock error: {err:?}"))?;
         let mut f = std::fs::OpenOptions::new()
             .write(true)
+            .create(true)
             .truncate(true)
             .open(self.store_cookie_path)?;
         cookie
