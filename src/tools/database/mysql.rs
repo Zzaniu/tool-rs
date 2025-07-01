@@ -30,7 +30,7 @@ pub async fn connect_with_env() -> MySqlPool {
         .expect("无法链接数据库")
 }
 
-pub async fn default_config() -> MySqlConnectOptions {
+pub fn default_config() -> MySqlConnectOptions {
     let opts = MySqlConnectOptions::new();
     #[cfg(not(debug_assertions))]
     {
