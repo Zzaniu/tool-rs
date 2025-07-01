@@ -3,10 +3,9 @@ use std::io::stdout;
 
 use chrono::Local;
 use tracing::Level;
-pub use tracing::{self, debug, error, info, trace, warn};
-pub use tracing_appender::non_blocking::WorkerGuard;
-pub use tracing_appender::rolling::Rotation;
-pub use tracing_subscriber;
+use tracing_appender::non_blocking::WorkerGuard;
+use tracing_appender::rolling::Rotation;
+use tracing_subscriber;
 use tracing_subscriber::fmt::format::Writer;
 use tracing_subscriber::fmt::time::FormatTime;
 use tracing_subscriber::fmt::writer::MakeWriterExt;

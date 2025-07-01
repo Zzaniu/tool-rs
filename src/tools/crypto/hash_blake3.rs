@@ -1,4 +1,4 @@
-pub use blake3::Hash;
+use blake3::Hash;
 
 const SECRET: &str = "UUZqRqjmY@AylZ0$3h9GNeZc4z$*FC19(8JDCnpx";
 
@@ -13,5 +13,5 @@ pub fn blake3_with_key(input: impl AsRef<[u8]>, key: &[u8; 32]) -> String {
 }
 
 pub fn blake3_to_hash(input: impl AsRef<[u8]>) -> Hash {
-    blake3::keyed_hash(SECRET[..32].as_bytes().try_into().unwrap(), input.as_ref())
+    blake3::keyed_hash(&SECRET.as_bytes()[..32].try_into().unwrap(), input.as_ref())
 }

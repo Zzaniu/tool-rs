@@ -10,7 +10,7 @@ where
         .unwrap_or_else(|_| panic!("创建文件`{}`失败", path.to_str().unwrap()));
     for item in data {
         let serde_value = serde_json::to_string(&item).expect("序列化失败");
-        writeln!(&file, "{}", serde_value).unwrap();
+        writeln!(&file, "{serde_value}").unwrap();
     }
 }
 
@@ -74,7 +74,7 @@ where
     let s = String::deserialize(deserializer)?;
     if s.len() == 10 {
         Ok(
-            NaiveDateTime::parse_from_str(&format!("{} 00:00:00", s), "%Y-%m-%d %H:%M:%S")
+            NaiveDateTime::parse_from_str(&format!("{s} 00:00:00"), "%Y-%m-%d %H:%M:%S")
                 .map_err(serde::de::Error::custom)?,
         )
     } else {
@@ -107,7 +107,7 @@ where
             } else if value.len() == 10 {
                 Ok(Some(
                     NaiveDateTime::parse_from_str(
-                        &format!("{} 00:00:00", value),
+                        &format!("{value} 00:00:00"),
                         "%Y-%m-%d %H:%M:%S",
                     )
                     .map_err(serde::de::Error::custom)?,

@@ -76,22 +76,20 @@ impl callbacks::ConnectionCallback for ConnectionCallback {
         connection: &Connection,
         close: Close,
     ) -> Result<(), amqprs::error::Error> {
-        info!(
-            "handle close request for connection {}, cause: {}",
-            connection, close
-        );
+        info!("handle close request for connection {connection}, cause: {close}",);
         Ok(())
     }
 
     async fn blocked(&mut self, connection: &Connection, reason: String) {
-        info!(
-            "handle blocked request for connection {}, reason: {}",
-            connection, reason
-        );
+        info!("handle blocked request for connection {connection}, reason: {reason}",);
     }
 
     async fn unblocked(&mut self, connection: &Connection) {
-        info!("handle unblocked request for connection {}", connection);
+        info!("handle unblocked request for connection {connection}");
+    }
+
+    async fn secret_updated(&mut self, connection: &Connection) {
+        info!("handle secret_updated request for connection {connection}");
     }
 }
 

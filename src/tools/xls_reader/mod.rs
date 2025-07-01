@@ -1,7 +1,9 @@
 use std::sync::OnceLock;
 
-pub use calamine::{self, CellType, Range};
-pub use regex::{self, Regex};
+pub use calamine;
+use calamine::{CellType, Range};
+pub use regex;
+use regex::Regex;
 
 #[derive(Debug, Default)]
 pub struct CellCoordinates {
