@@ -22,7 +22,7 @@ impl FormatTime for LocalTimer {
 /// LOG_LEVEL 设置总的日志级别
 /// FILE_LOG_LEVEL 设置写入文件日志级别
 /// STDOUT_LOG_LEVEL 设置写入控制台日志级别
-pub fn init() -> WorkerGuard {
+pub fn init() {
     #[cfg(debug_assertions)]
     let log_to_file_flag = env::var("LOG_TO_FILE_FLAG")
         .map(|x| x.parse::<bool>().unwrap_or_default())
@@ -41,7 +41,7 @@ pub fn init() -> WorkerGuard {
         env::var("LOG_LEVEL").unwrap_or_default().to_lowercase(),
     ));
 
-    if log_to_file_flag {
+    let guard = if log_to_file_flag {
         let file_appender = tracing_appender::rolling::daily(
             env::var("LOG_DIR").unwrap_or_default(),
             env::var("LOG_FILE").unwrap_or("rs_log.log".to_owned()),
@@ -66,16 +66,19 @@ pub fn init() -> WorkerGuard {
             ) // 同时追加控制台输出
             .with_ansi(false) // 如果日志是写入文件，应将ansi的颜色输出功能关掉
             .init();
-        return guard;
-    }
+        guard
+    } else {
+        let (non_blocking, guard) = tracing_appender::non_blocking(stdout());
+        builder
+            .event_format(format.pretty())
+            .with_writer(non_blocking)
+            .with_ansi(true)
+            .init();
+        guard
+    };
 
-    let (non_blocking, guard) = tracing_appender::non_blocking(stdout());
-    builder
-        .event_format(format.pretty())
-        .with_writer(non_blocking)
-        .with_ansi(true)
-        .init();
-    guard
+    // 转成静态, 保证一直有效. forget 不保证一直有效
+    Box::leak(Box::new(guard));
 }
 
 fn get_log_level(log_level: impl AsRef<str>) -> Level {
