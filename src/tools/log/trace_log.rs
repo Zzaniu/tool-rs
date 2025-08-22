@@ -32,7 +32,7 @@ pub fn init() {
     let format = tracing_subscriber::fmt::format()
         .with_level(true)
         .with_source_location(true)
-        .with_target(true)
+        .with_target(false)
         .with_timer(LocalTimer);
 
     let builder = tracing_subscriber::fmt().with_max_level(get_log_level(
