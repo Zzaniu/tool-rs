@@ -1,7 +1,6 @@
+use chrono::Local;
 use std::env;
 use std::io::stdout;
-
-use chrono::Local;
 use tracing::Level;
 use tracing_appender::non_blocking::WorkerGuard;
 use tracing_appender::rolling::Rotation;
@@ -164,7 +163,8 @@ pub fn init_with_config(log_config: LogConfig) -> WorkerGuard {
     let format = tracing_subscriber::fmt::format()
         .with_level(true)
         .with_source_location(true)
-        .with_target(true)
+        // 有了文件和行号之后, 这个(tool::tools::log::trace_log::tests)可以禁掉
+        .with_target(false)
         .with_timer(LocalTimer);
 
     let builder = tracing_subscriber::fmt()
