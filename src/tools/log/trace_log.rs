@@ -2,7 +2,6 @@ use chrono::Local;
 use std::env;
 use std::io::stdout;
 use tracing::Level;
-use tracing_appender::non_blocking::WorkerGuard;
 use tracing_appender::rolling::Rotation;
 use tracing_subscriber;
 use tracing_subscriber::fmt::format::Writer;
@@ -159,7 +158,7 @@ impl<'a> LogConfig<'a> {
     }
 }
 
-pub fn init_with_config(log_config: LogConfig) -> WorkerGuard {
+pub fn init_with_config(log_config: LogConfig) {
     let format = tracing_subscriber::fmt::format()
         .with_level(true)
         .with_source_location(true)
@@ -186,7 +185,9 @@ pub fn init_with_config(log_config: LogConfig) -> WorkerGuard {
             ) // 同时追加控制台输出
             .with_ansi(false) // 如果日志是写入文件，应将ansi的颜色输出功能关掉
             .init();
-        return guard;
+        // 转成静态, 保证一直有效. forget 不保证一直有效
+        Box::leak(Box::new(guard));
+        return;
     }
 
     let (non_blocking, guard) = tracing_appender::non_blocking(stdout());
@@ -195,5 +196,6 @@ pub fn init_with_config(log_config: LogConfig) -> WorkerGuard {
         .with_writer(non_blocking)
         .with_ansi(true)
         .init();
-    guard
+    // 转成静态, 保证一直有效. forget 不保证一直有效
+    Box::leak(Box::new(guard));
 }
