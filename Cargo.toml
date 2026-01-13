@@ -17,28 +17,28 @@ amqprs = { version = "2.1.2", optional = true }
 base64 = { version = "0.22.1", optional = true }
 async-trait = { version = "0.1.88", optional = true }
 log = { version = "0.4.27", optional = true }
-reqwest = { version = "0.12.21", features = ["json", "cookies", "rustls-tls", "multipart", "blocking"], default-features = false, optional = true }
-reqwest_cookie_store = { version = "0.8.0", optional = true }
-cookie_store = { version = "0.21.1", optional = true }
+reqwest = { version = "0.12.28", features = ["json", "cookies", "rustls-tls", "multipart", "blocking"], default-features = false, optional = true }
+reqwest_cookie_store = { version = "0.9.0", optional = true }
+cookie_store = { version = "0.22.0", optional = true }
 hex = { version = "0.4.3", optional = true }
 ecb = { version = "0.1.2", optional = true }
 cbc = { version = "0.1.2", optional = true }
 aes = { version = "0.8.4", optional = true }
 lettre = { version = "0.11.17", features = ["builder", "smtp-transport", "tokio1-rustls-tls"], default-features = false, optional = true }
 derive_builder = { version = "0.20.2", optional = true }
-zip = { version = "4.2.0", features = ["deflate"], default-features = false, optional = true }
+zip = { version = "7.0.0", features = ["deflate"], default-features = false, optional = true }
 mime = { version = "0.3.17", optional = true }
 blake3 = { version = "1.8.2", optional = true }
 paste = { version = "1.0.15", optional = true }
 rust_decimal = { version = "1.37.2", optional = true }
-calamine = { version = "0.28.0", optional = true }
+calamine = { version = "0.32.0", optional = true }
 regex = { version = "1.11.1", optional = true }
 parking_lot = { version = "0.12.4", optional = true }
 rand = { version = "0.9.1", optional = true }
 thiserror = { version = "2.0.12", optional = true }
 
 [features]
-default = ["zlog"]
+default = ["full"]
 full = ["zlog", "database", "serialize", "session", "mq", "crypto", "mail", "zip", "xls_reader", "sre_breaker"]
 zlog = ["log", "tracing", "tracing-subscriber", "tracing-appender", "chrono"]
 database = ["sqlx", "log", "derive_builder", "serde"]

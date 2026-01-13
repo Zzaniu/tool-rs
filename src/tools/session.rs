@@ -10,7 +10,7 @@ use std::time::Duration;
 
 const STORE_COOKIE_PATH: &str = "spider.cookie";
 const USER_AGENT_NAME: &str = "User-Agent";
-const USER_AGENT_VALUE:&str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36";
+const USER_AGENT_VALUE: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36";
 
 // Rust runtime 在离开作用域时自动释放内存
 // Rc 在单线程下能保证内存正确释放, 多线程下无法保证引用技术原子性(更加不能保证数据的原子性), 导致内存不能正确释放(其实就是计数为 0 时, 使离开作用域)
