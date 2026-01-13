@@ -1,8 +1,7 @@
 use amqprs::channel::{Channel, ConfirmSelectArguments};
 use amqprs::{
-    callbacks,
-    connection::{Connection, OpenConnectionArguments},
-    Ack, BasicProperties, Cancel, Close, CloseChannel, Nack, Return,
+    callbacks, connection::{Connection, OpenConnectionArguments}, Ack, BasicProperties, Cancel, Close, CloseChannel, Nack,
+    Return,
 };
 use async_trait::async_trait;
 use derive_builder::Builder;
@@ -36,10 +35,6 @@ impl<'a> RabbitMqConnectInfo<'a> {
     }
 }
 
-pub struct ConnAndChannel {
-    pub connection: Connection,
-    pub channel: Channel,
-}
 pub struct ConnectionCallback;
 pub struct ChannelCallback;
 
@@ -134,36 +129,34 @@ impl callbacks::ChannelCallback for ChannelCallback {
     }
 }
 
+pub async fn new_channel(connection: &Connection) -> Result<Channel, amqprs::error::Error> {
+    // None 表示 channel 是使用的随机 ID
+    let channel = connection.open_channel(None).await?;
+    channel.register_callback(ChannelCallback).await?;
+
+    // 此方法将通道设置为使用发布者确认, 客户端只能在非事务性通道上使用此方法.
+    channel
+        .confirm_select(ConfirmSelectArguments::default())
+        .await?;
+    Ok(channel)
+}
+
 pub async fn connect(
     connect_info: &RabbitMqConnectInfo<'_>,
-) -> Result<ConnAndChannel, amqprs::error::Error> {
+) -> Result<Connection, amqprs::error::Error> {
     let mut args = OpenConnectionArguments::new(
         connect_info.host,
         connect_info.port,
         connect_info.username,
         connect_info.password,
     );
+
     if let Some(virtual_host) = connect_info.virtual_host {
         args.virtual_host(virtual_host);
     }
+
     let connection = Connection::open(&args).await?;
     connection.register_callback(ConnectionCallback).await?;
 
-    let channel = connection.open_channel(None).await?; // None 表示 channel 是使用的随机 ID
-    channel.register_callback(ChannelCallback).await?;
-    Ok(ConnAndChannel {
-        connection,
-        channel,
-    })
-}
-
-pub async fn new(
-    connect_info: &RabbitMqConnectInfo<'_>,
-) -> Result<ConnAndChannel, amqprs::error::Error> {
-    let conn = connect(connect_info).await?;
-    // 此方法将通道设置为使用发布者确认, 客户端只能在非事务性通道上使用此方法.
-    conn.channel
-        .confirm_select(ConfirmSelectArguments::default())
-        .await?;
-    Ok(conn)
+    Ok(connection)
 }

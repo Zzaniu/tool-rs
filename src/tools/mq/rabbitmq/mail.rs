@@ -2,6 +2,7 @@ use super::rabbitmq;
 use crate::error_caused_str;
 use crate::mq::rabbitmq::rabbitmq::{RabbitMqConnectInfo, RabbitMqConnectInfoBuilder};
 use amqprs::channel::{BasicPublishArguments, Channel};
+use amqprs::connection::Connection;
 use amqprs::{BasicProperties, DELIVERY_MODE_PERSISTENT};
 use anyhow::{anyhow, Result as AnyResult};
 use base64::{engine::general_purpose, Engine as _};
@@ -114,13 +115,11 @@ pub async fn send_mail(rabbitmq_channel: &Channel, mail: &MailInfo<'_>) -> AnyRe
 
 pub async fn get_mail_rabbitmq_conn(
     connect_info: RabbitMqConnectInfo<'_>,
-) -> Result<rabbitmq::ConnAndChannel, amqprs::error::Error> {
-    let conn = rabbitmq::new(&connect_info).await?;
-    Ok(conn)
+) -> Result<Connection, amqprs::error::Error> {
+    rabbitmq::connect(&connect_info).await
 }
 
-pub async fn get_mail_rabbitmq_conn_with_env()
--> Result<rabbitmq::ConnAndChannel, amqprs::error::Error> {
+pub async fn get_mail_rabbitmq_conn_with_env() -> Result<Connection, amqprs::error::Error> {
     let rabbitmq_host = std::env::var("RABBITMQ_HOST").expect("rabbitmq 服务地址错误");
     let rabbitmq_port = std::env::var("RABBITMQ_PORT")
         .expect("rabbitmq 服务端口号错误")
