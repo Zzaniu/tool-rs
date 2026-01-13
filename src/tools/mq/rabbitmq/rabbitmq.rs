@@ -132,13 +132,13 @@ impl callbacks::ChannelCallback for ChannelCallback {
 pub async fn new_channel_with_consume(
     connection: &Connection,
 ) -> Result<Channel, amqprs::error::Error> {
-    new_channel(connection, false)
+    new_channel(connection, false).await
 }
 
 pub async fn new_channel_with_publish(
     connection: &Connection,
 ) -> Result<Channel, amqprs::error::Error> {
-    new_channel(connection, true)
+    new_channel(connection, true).await
 }
 
 pub async fn new_channel(
