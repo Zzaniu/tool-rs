@@ -1,11 +1,8 @@
-use amqprs::channel::{
-    Channel, ConfirmSelectArguments, ExchangeDeclareArguments, QueueBindArguments,
-    QueueDeclareArguments,
-};
+use amqprs::channel::{Channel, ConfirmSelectArguments};
 use amqprs::{
     callbacks,
     connection::{Connection, OpenConnectionArguments},
-    Ack, BasicProperties, Cancel, Close, CloseChannel, FieldTable, Nack, Return,
+    Ack, BasicProperties, Cancel, Close, CloseChannel, Nack, Return,
 };
 use async_trait::async_trait;
 use derive_builder::Builder;
@@ -35,29 +32,6 @@ impl<'a> RabbitMqConnectInfo<'a> {
             username,
             password,
             virtual_host,
-        }
-    }
-}
-
-pub struct RabbitMqDeclareInfo<'a> {
-    pub queue: &'a str,
-    pub exchange_name: &'a str,
-    pub routing_key: &'a str,
-    pub exchange_type: &'a str,
-}
-
-impl<'a> RabbitMqDeclareInfo<'a> {
-    pub fn new(
-        queue: &'a str,
-        exchange_name: &'a str,
-        routing_key: &'a str,
-        exchange_type: &'a str,
-    ) -> RabbitMqDeclareInfo<'a> {
-        Self {
-            queue,
-            exchange_name,
-            routing_key,
-            exchange_type,
         }
     }
 }
@@ -183,61 +157,10 @@ pub async fn connect(
     })
 }
 
-async fn init(
-    channel: &Channel,
-    declare_info: &RabbitMqDeclareInfo<'_>,
-    dlx_info: Option<&RabbitMqDeclareInfo<'_>>,
-) -> Result<(), amqprs::error::Error> {
-    if let Some(dlx_info) = dlx_info {
-        let (queue_name, _, _) = channel
-            .queue_declare(QueueDeclareArguments::durable_client_named(dlx_info.queue))
-            .await?
-            .unwrap();
-        let exchange_arguments =
-            ExchangeDeclareArguments::new(dlx_info.exchange_name, dlx_info.exchange_type)
-                .durable(true)
-                .finish();
-        channel.exchange_declare(exchange_arguments).await?;
-        channel
-            .queue_bind(QueueBindArguments::new(
-                queue_name.as_str(),
-                dlx_info.exchange_name,
-                dlx_info.routing_key,
-            ))
-            .await?;
-    }
-    let mut arg = QueueDeclareArguments::durable_client_named(declare_info.queue);
-    if let Some(dlx_info) = dlx_info {
-        let mut argument = FieldTable::new();
-        argument.insert(
-            "x-dead-letter-exchange".try_into().unwrap(),
-            dlx_info.exchange_name.into(),
-        );
-        arg.arguments(argument);
-    }
-    let (queue_name, _, _) = channel.queue_declare(arg).await?.unwrap();
-    let exchange_arguments =
-        ExchangeDeclareArguments::new(declare_info.exchange_name, declare_info.exchange_type)
-            .durable(true)
-            .finish();
-    channel.exchange_declare(exchange_arguments).await?;
-    channel
-        .queue_bind(QueueBindArguments::new(
-            queue_name.as_str(),
-            declare_info.exchange_name,
-            declare_info.routing_key,
-        ))
-        .await?;
-    Ok(())
-}
-
 pub async fn new(
     connect_info: &RabbitMqConnectInfo<'_>,
-    declare_info: &RabbitMqDeclareInfo<'_>,
-    dlx_info: Option<&RabbitMqDeclareInfo<'_>>,
 ) -> Result<ConnAndChannel, amqprs::error::Error> {
     let conn = connect(connect_info).await?;
-    init(&conn.channel, declare_info, dlx_info).await?;
     // 此方法将通道设置为使用发布者确认, 客户端只能在非事务性通道上使用此方法.
     conn.channel
         .confirm_select(ConfirmSelectArguments::default())

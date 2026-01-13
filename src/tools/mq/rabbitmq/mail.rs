@@ -115,29 +115,12 @@ pub async fn send_mail(rabbitmq_channel: &Channel, mail: &MailInfo<'_>) -> AnyRe
 pub async fn get_mail_rabbitmq_conn(
     connect_info: RabbitMqConnectInfo<'_>,
 ) -> Result<rabbitmq::ConnAndChannel, amqprs::error::Error> {
-    let queue = "mail";
-    let exchange_name = "better";
-    let routing_key = "better_mail";
-    let exchange_type = "direct";
-    let dlx_queue = "dead-mail-queue";
-    let dlx_exchange_name = "dead-mail-exchange";
-    let dlx_routing_key = "dead-mail-queue";
-    let dlx_exchange_type = "fanout";
-
-    let decl_info =
-        rabbitmq::RabbitMqDeclareInfo::new(queue, exchange_name, routing_key, exchange_type);
-    let dlx_info = rabbitmq::RabbitMqDeclareInfo::new(
-        dlx_queue,
-        dlx_exchange_name,
-        dlx_routing_key,
-        dlx_exchange_type,
-    );
-    let conn = rabbitmq::new(&connect_info, &decl_info, Some(&dlx_info)).await?;
+    let conn = rabbitmq::new(&connect_info).await?;
     Ok(conn)
 }
 
-pub async fn get_mail_rabbitmq_conn_with_env(
-) -> Result<rabbitmq::ConnAndChannel, amqprs::error::Error> {
+pub async fn get_mail_rabbitmq_conn_with_env()
+-> Result<rabbitmq::ConnAndChannel, amqprs::error::Error> {
     let rabbitmq_host = std::env::var("RABBITMQ_HOST").expect("rabbitmq 服务地址错误");
     let rabbitmq_port = std::env::var("RABBITMQ_PORT")
         .expect("rabbitmq 服务端口号错误")
