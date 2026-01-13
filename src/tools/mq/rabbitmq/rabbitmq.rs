@@ -129,15 +129,32 @@ impl callbacks::ChannelCallback for ChannelCallback {
     }
 }
 
-pub async fn new_channel(connection: &Connection) -> Result<Channel, amqprs::error::Error> {
+pub async fn new_channel_with_consume(
+    connection: &Connection,
+) -> Result<Channel, amqprs::error::Error> {
+    new_channel(connection, false)
+}
+
+pub async fn new_channel_with_publish(
+    connection: &Connection,
+) -> Result<Channel, amqprs::error::Error> {
+    new_channel(connection, true)
+}
+
+pub async fn new_channel(
+    connection: &Connection,
+    confirm: bool,
+) -> Result<Channel, amqprs::error::Error> {
     // None 表示 channel 是使用的随机 ID
     let channel = connection.open_channel(None).await?;
     channel.register_callback(ChannelCallback).await?;
 
     // 此方法将通道设置为使用发布者确认, 客户端只能在非事务性通道上使用此方法.
-    channel
-        .confirm_select(ConfirmSelectArguments::default())
-        .await?;
+    if confirm {
+        channel
+            .confirm_select(ConfirmSelectArguments::default())
+            .await?;
+    }
     Ok(channel)
 }
 
