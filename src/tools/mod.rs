@@ -12,6 +12,8 @@ pub mod mq;
 pub mod serialize;
 #[cfg(feature = "session")]
 pub mod session;
+#[cfg(feature = "signal")]
+pub mod signal;
 #[cfg(feature = "sre_breaker")]
 pub mod sre_breaker;
 #[cfg(feature = "xls_reader")]
