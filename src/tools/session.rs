@@ -1,8 +1,8 @@
-use anyhow::{anyhow, Result as AnyResult};
+use anyhow::{Result as AnyResult, anyhow};
 pub use cookie_store;
 pub use reqwest;
-use reqwest::header::{HeaderMap, HeaderValue};
 use reqwest::Client;
+use reqwest::header::{HeaderMap, HeaderValue};
 pub use reqwest_cookie_store;
 use std::ops::Deref;
 use std::sync::Arc;

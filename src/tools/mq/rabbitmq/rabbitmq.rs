@@ -1,7 +1,7 @@
 use amqprs::channel::{Channel, ConfirmSelectArguments};
 use amqprs::{
-    callbacks, connection::{Connection, OpenConnectionArguments}, Ack, BasicProperties, Cancel, Close, CloseChannel, Nack,
-    Return,
+    Ack, BasicProperties, Cancel, Close, CloseChannel, Nack, Return, callbacks,
+    connection::{Connection, OpenConnectionArguments},
 };
 use async_trait::async_trait;
 use derive_builder::Builder;

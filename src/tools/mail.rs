@@ -1,10 +1,14 @@
 use anyhow::{anyhow, Result as AnyResult};
+use base64::Engine;
 use derive_builder::Builder;
 use lettre::message::header::ContentType;
 use lettre::message::{Attachment, Mailbox, MessageBuilder, MultiPart, SinglePart};
 use lettre::transport::smtp::authentication::Credentials;
+use lettre::transport::smtp::PoolConfig;
 use lettre::{Address, AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor};
+use serde::{Deserialize, Deserializer};
 use std::hash::{DefaultHasher, Hash, Hasher};
+use std::sync::OnceLock;
 
 #[derive(Debug, Clone, Builder)]
 pub struct AttachmentInfo {
@@ -23,9 +27,37 @@ impl Hash for AttachmentInfo {
     }
 }
 
+impl<'de> Deserialize<'de> for AttachmentInfo {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let [name, content_base64]: [String; 2] = Deserialize::deserialize(deserializer)?;
+        let content = base64::engine::general_purpose::STANDARD
+            .decode(content_base64)
+            .map_err(serde::de::Error::custom)?;
+        Ok(AttachmentInfo {
+            name,
+            content_type: "application/octet-stream".to_string(),
+            content,
+        })
+    }
+}
+
+impl AttachmentInfo {
+    pub fn into_lettre_attachment(self) -> AnyResult<SinglePart> {
+        Ok(Attachment::new(self.name).body(
+            self.content,
+            self.content_type
+                .parse()
+                .map_err(|err| anyhow!("附件类型错误: {}", err))?,
+        ))
+    }
+}
+
 // 邮件信息结构体
 #[allow(unused)]
-#[derive(Debug, Builder)]
+#[derive(Debug, Deserialize, Builder)]
 pub struct MailInfo {
     #[builder(setter(into))]
     pub title: String,
@@ -38,7 +70,7 @@ pub struct MailInfo {
     #[builder(setter(into, strip_option), default)]
     pub bcc: Option<String>,
     #[builder(setter(strip_option), default)]
-    pub attach: Option<Vec<AttachmentInfo>>,
+    pub attachment: Option<Vec<AttachmentInfo>>,
 }
 
 impl Hash for MailInfo {
@@ -52,8 +84,8 @@ impl Hash for MailInfo {
         if let Some(bcc) = &self.bcc {
             bcc.hash(state);
         }
-        if let Some(attach) = &self.attach {
-            attach.hash(state);
+        if let Some(attachment) = &self.attachment {
+            attachment.hash(state);
         }
     }
 }
@@ -64,6 +96,11 @@ impl MailInfo {
         self.hash(&mut hasher);
         hasher.finish()
     }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct MailInfoWrapper {
+    pub mail: MailInfo,
 }
 
 fn default_mailer_name() -> &'static str {
@@ -80,64 +117,44 @@ pub struct Mailer {
     pub name: String,
     #[builder(setter(into))]
     pub server_url: String,
+
+    #[builder(setter(skip), default)]
+    transport: OnceLock<AsyncSmtpTransport<Tokio1Executor>>,
+    #[builder(setter(skip), default)]
+    from_mailbox: OnceLock<Mailbox>,
 }
 
 impl Mailer {
     pub async fn send_mail(&self, mail_info: MailInfo) -> AnyResult<()> {
-        let mut builder = self.get_message_builder()?;
-        builder = builder.subject(mail_info.title);
+        let mut builder = Message::builder()
+            .from(self.get_from_mailbox()?)
+            .subject(mail_info.title);
 
-        for v in mail_info.to.split(',') {
-            builder = builder.to(v.parse().map_err(|err| anyhow!("邮箱格式错误: {}", err))?);
+        // 解析并添加收件人/抄送/密送
+        builder = self.apply_mailboxes(builder, mail_info.to, "收件人", MessageBuilder::to)?;
+
+        if let Some(cc) = mail_info.cc
+            && !cc.is_empty()
+        {
+            builder = self.apply_mailboxes(builder, cc, "抄送", MessageBuilder::cc)?;
         }
 
-        if let Some(cc) = mail_info.cc {
-            if !cc.is_empty() {
-                for v in cc.split(',') {
-                    builder = builder.cc(v
-                        .parse()
-                        .map_err(|err| anyhow!("抄送邮箱 格式错误: {}", err))?);
-                }
-            }
+        if let Some(bcc) = mail_info.bcc
+            && !bcc.is_empty()
+        {
+            builder = self.apply_mailboxes(builder, bcc, "密送", MessageBuilder::bcc)?;
         }
 
-        if let Some(bcc) = mail_info.bcc {
-            if !bcc.is_empty() {
-                for v in bcc.split(',') {
-                    builder = builder.bcc(
-                        v.parse()
-                            .map_err(|err| anyhow!("密送邮箱 格式错误: {}", err))?,
-                    );
-                }
-            }
-        }
-
-        // see https://docs.rs/lettre/0.10.0-rc.4/lettre/message/index.html#complex-mime-body
-        let email = if let Some(att) = mail_info.attach {
-            // 如果有附件的话, 添加附件
-            let mut part = MultiPart::related().singlepart(SinglePart::html(mail_info.body));
+        let email = if let Some(att) = mail_info.attachment {
+            let mut multipart = MultiPart::mixed().singlepart(SinglePart::html(mail_info.body));
             for v in att {
-                part = part.singlepart(
-                    Attachment::new(v.name).body(
-                        v.content,
-                        v.content_type
-                            .parse()
-                            .map_err(|err| anyhow!("附件类型错误: {}", err))?,
-                    ),
-                );
+                multipart = multipart.singlepart(v.into_lettre_attachment()?);
             }
-            builder
-                .multipart(
-                    MultiPart::mixed() // 混合
-                        .multipart(part),
-                )
-                .map_err(|err| anyhow!("构建附件邮件失败: {}", err))?
+            builder.multipart(multipart)
         } else {
-            builder
-                .header(ContentType::TEXT_HTML)
-                .body(mail_info.body)
-                .map_err(|err| anyhow!("构建普通邮件失败: {}", err))?
-        };
+            builder.header(ContentType::TEXT_HTML).body(mail_info.body)
+        }
+        .map_err(|err| anyhow!("构建邮件失败: {}", err))?;
 
         self.get_transporter()?
             .send(email)
@@ -146,27 +163,51 @@ impl Mailer {
         Ok(())
     }
 
-    fn get_message_builder(&self) -> AnyResult<MessageBuilder> {
-        // note: 用户直接回复邮件时, reply-to 就是默认的收件人. 如果用户不指定它, from 就是默认的收件人
-        Ok(Message::builder().from(Mailbox::new(
+    fn apply_mailboxes(
+        &self,
+        mut builder: MessageBuilder,
+        input: String,
+        label: &str,
+        f: fn(MessageBuilder, Mailbox) -> MessageBuilder,
+    ) -> AnyResult<MessageBuilder> {
+        for v in input.split(',').map(|s| s.trim()).filter(|s| !s.is_empty()) {
+            let mailbox = v
+                .parse()
+                .map_err(|err| anyhow!("{}邮箱格式错误 '{}': {}", label, v, err))?;
+            builder = f(builder, mailbox);
+        }
+        Ok(builder)
+    }
+
+    fn get_from_mailbox(&self) -> AnyResult<Mailbox> {
+        if let Some(mailbox) = self.from_mailbox.get() {
+            return Ok(mailbox.clone());
+        }
+        let mailbox = Mailbox::new(
             Some(self.name.clone()),
             self.addr
-                .clone()
                 .parse::<Address>()
-                .map_err(|err| anyhow!("get_message_builder from 格式错误: {}", err))?,
-        )))
+                .map_err(|err| anyhow!("发件人邮箱格式错误: {}", err))?,
+        );
+        // 已经被初始化则会返回 Err(value)
+        let _ = self.from_mailbox.set(mailbox.clone());
+        Ok(self.from_mailbox.get().unwrap().clone())
     }
 
     pub fn get_transporter(&self) -> AnyResult<AsyncSmtpTransport<Tokio1Executor>> {
-        // TODO: 是否需要池化? 参考 pool_config
-        Ok(
-            AsyncSmtpTransport::<Tokio1Executor>::relay(self.server_url.as_str())
-                .map_err(|e| anyhow!("AsyncSmtpTransport::<Tokio1Executor>::relay 失败: {}", e))?
-                .credentials(Credentials::new(
-                    self.addr.clone(),
-                    self.pass_word.to_owned(),
-                ))
-                .build(),
-        )
+        if let Some(transport) = self.transport.get() {
+            return Ok(transport.clone());
+        }
+        println!("获取链接");
+        let transport = AsyncSmtpTransport::<Tokio1Executor>::relay(self.server_url.as_str())
+            .map_err(|e| anyhow!("AsyncSmtpTransport::<Tokio1Executor>::relay 失败: {}", e))?
+            .credentials(Credentials::new(
+                self.addr.clone(),
+                self.pass_word.to_owned(),
+            ))
+            .pool_config(PoolConfig::new().max_size(10)) // 默认其实也是10
+            .build();
+        let _ = self.transport.set(transport.clone());
+        Ok(self.transport.get().unwrap().clone())
     }
 }

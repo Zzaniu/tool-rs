@@ -21,3 +21,4 @@ Cargo.lock
 .idea/
 *test*
 logs
+AGENTS.md

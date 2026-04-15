@@ -1,5 +1,5 @@
 use chrono::NaiveDateTime;
-use serde::{self, de::DeserializeOwned, ser::Serialize, Deserialize};
+use serde::{self, Deserialize, de::DeserializeOwned, ser::Serialize};
 use std::io::{BufRead, BufReader, Write};
 
 pub fn dumps_vec<T>(data: &Vec<T>, path: &std::path::Path)
@@ -172,4 +172,6 @@ macro_rules! impl_numeric_type_for_integers {
     };
 }
 
-impl_numeric_type_for_integers!(i8, i16, i32, i64, i128, isize, u8, u16, u32, u64, u128, usize);
+impl_numeric_type_for_integers!(
+    i8, i16, i32, i64, i128, isize, u8, u16, u32, u64, u128, usize
+);

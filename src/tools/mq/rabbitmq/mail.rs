@@ -4,8 +4,8 @@ use crate::mq::rabbitmq::rabbitmq::{RabbitMqConnectInfo, RabbitMqConnectInfoBuil
 use amqprs::channel::{BasicPublishArguments, Channel};
 use amqprs::connection::Connection;
 use amqprs::{BasicProperties, DELIVERY_MODE_PERSISTENT};
-use anyhow::{anyhow, Result as AnyResult};
-use base64::{engine::general_purpose, Engine as _};
+use anyhow::{Result as AnyResult, anyhow};
+use base64::{Engine as _, engine::general_purpose};
 use derive_builder::Builder;
 use log::info;
 
