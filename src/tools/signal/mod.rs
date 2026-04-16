@@ -5,6 +5,7 @@ pub async fn wait_for_quit() {
     }
     #[cfg(unix)]
     {
+        use log::info;
         use tokio::signal::unix::SignalKind;
         // SIGINT, ctrl_c/kill -2
         let mut signal_ctrl_c = tokio::signal::unix::signal(SignalKind::interrupt())
