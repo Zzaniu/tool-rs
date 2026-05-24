@@ -4,10 +4,12 @@ use std::io::stdout;
 use tracing::Level;
 use tracing_appender::rolling::Rotation;
 use tracing_subscriber;
+use tracing_subscriber::filter::LevelFilter;
 use tracing_subscriber::fmt::format::Writer;
 use tracing_subscriber::fmt::time::FormatTime;
-use tracing_subscriber::fmt::writer::MakeWriterExt;
+use tracing_subscriber::prelude::*; // 必须引入以启用 Registry 的 Layer 组合与初始化扩展
 
+#[derive(Clone, Copy)]
 struct LocalTimer;
 
 impl FormatTime for LocalTimer {
@@ -29,54 +31,64 @@ pub fn init() {
     let log_to_file_flag = env::var("LOG_TO_FILE_FLAG")
         .map(|x| x.parse::<bool>().unwrap_or(true))
         .unwrap_or(true);
+
     let format = tracing_subscriber::fmt::format()
         .with_level(true)
         .with_source_location(true)
         .with_target(false)
         .with_timer(LocalTimer);
 
-    let builder = tracing_subscriber::fmt().with_max_level(get_log_level(
+    // 1. 获取全局和分层的过滤级别
+    let global_level = LevelFilter::from_level(get_log_level(
         env::var("LOG_LEVEL").unwrap_or_default().to_lowercase(),
     ));
+    let stdout_level = LevelFilter::from_level(get_log_level(
+        env::var("STDOUT_LOG_LEVEL")
+            .unwrap_or_default()
+            .to_lowercase(),
+    ));
+    let file_level = LevelFilter::from_level(get_log_level(
+        env::var("FILE_LOG_LEVEL")
+            .unwrap_or_default()
+            .to_lowercase(),
+    ));
 
-    let guard = if log_to_file_flag {
+    // 2. 默认创建并配置 stdout_layer (输出带有 ANSI 颜色)
+    let (stdout_non_blocking, stdout_guard) = tracing_appender::non_blocking(stdout());
+    let stdout_layer = tracing_subscriber::fmt::layer()
+        .event_format(format.clone().pretty())
+        .with_writer(stdout_non_blocking)
+        .with_ansi(true)
+        .with_filter(stdout_level);
+
+    Box::leak(Box::new(stdout_guard));
+
+    // 3. 根据 flag 决定是否创建 file_layer (无 ANSI 颜色)
+    let file_layer = if log_to_file_flag {
         let file_appender = tracing_appender::rolling::daily(
             env::var("LOG_DIR").unwrap_or_default(),
             env::var("LOG_FILE").unwrap_or("rs_log.log".to_owned()),
         );
-        let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
-        builder
-            .event_format(format)
-            .with_writer(
-                non_blocking
-                    .with_max_level(get_log_level(
-                        env::var("FILE_LOG_LEVEL")
-                            .unwrap_or_default()
-                            .to_lowercase(),
-                    ))
-                    .and(
-                        stdout.with_max_level(get_log_level(
-                            env::var("STDOUT_LOG_LEVEL")
-                                .unwrap_or_default()
-                                .to_lowercase(),
-                        )),
-                    ),
-            ) // 同时追加控制台输出
-            .with_ansi(false) // 如果日志是写入文件，应将ansi的颜色输出功能关掉
-            .init();
-        guard
+        let (file_non_blocking, file_guard) = tracing_appender::non_blocking(file_appender);
+        Box::leak(Box::new(file_guard));
+
+        Some(
+            tracing_subscriber::fmt::layer()
+                .event_format(format)
+                .with_writer(file_non_blocking)
+                .with_ansi(false)
+                .with_filter(file_level),
+        )
     } else {
-        let (non_blocking, guard) = tracing_appender::non_blocking(stdout());
-        builder
-            .event_format(format.pretty())
-            .with_writer(non_blocking)
-            .with_ansi(true)
-            .init();
-        guard
+        None
     };
 
-    // 转成静态, 保证一直有效. forget 不保证一直有效
-    Box::leak(Box::new(guard));
+    // 4. 将 Layer 组合并注册至全局
+    tracing_subscriber::registry()
+        .with(global_level)
+        .with(stdout_layer)
+        .with(file_layer)
+        .init();
 }
 
 fn get_log_level(log_level: impl AsRef<str>) -> Level {
@@ -96,8 +108,6 @@ pub struct LogConfig<'a> {
     pub log_dir: &'a str,
     pub log_file: &'a str,
     pub rotation: Rotation,
-    // pub file_log_level: &'a str,
-    // pub stdout_log_level: &'a str,
 }
 
 impl<'a> Default for LogConfig<'a> {
@@ -162,40 +172,47 @@ pub fn init_with_config(log_config: LogConfig) {
     let format = tracing_subscriber::fmt::format()
         .with_level(true)
         .with_source_location(true)
-        // 有了文件和行号之后, 这个(tool::tools::log::trace_log::tests)可以禁掉
         .with_target(false)
         .with_timer(LocalTimer);
 
-    let builder = tracing_subscriber::fmt()
-        .with_max_level(get_log_level(log_config.log_level.to_lowercase()));
+    // 1. 获取过滤级别
+    let log_level = LevelFilter::from_level(get_log_level(log_config.log_level.to_lowercase()));
 
-    if log_config.log_to_file_flag {
+    // 2. 默认创建并配置 stdout_layer (有 ANSI 颜色)
+    let (stdout_non_blocking, stdout_guard) = tracing_appender::non_blocking(stdout());
+    let stdout_layer = tracing_subscriber::fmt::layer()
+        .event_format(format.clone().pretty())
+        .with_writer(stdout_non_blocking)
+        .with_ansi(true)
+        .with_filter(log_level);
+
+    Box::leak(Box::new(stdout_guard));
+
+    // 3. 根据配置判断是否添加 file_layer (无 ANSI 颜色)
+    let file_layer = if log_config.log_to_file_flag {
         let file_appender = tracing_appender::rolling::RollingFileAppender::new(
             log_config.rotation,
             log_config.log_dir,
             log_config.log_file,
         );
-        let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
-        builder
-            .event_format(format)
-            .with_writer(
-                non_blocking
-                    .with_max_level(get_log_level(log_config.log_level.to_lowercase()))
-                    .and(stdout.with_max_level(get_log_level(log_config.log_level.to_lowercase()))),
-            ) // 同时追加控制台输出
-            .with_ansi(false) // 如果日志是写入文件，应将ansi的颜色输出功能关掉
-            .init();
-        // 转成静态, 保证一直有效. forget 不保证一直有效
-        Box::leak(Box::new(guard));
-        return;
-    }
+        let (file_non_blocking, file_guard) = tracing_appender::non_blocking(file_appender);
+        Box::leak(Box::new(file_guard));
 
-    let (non_blocking, guard) = tracing_appender::non_blocking(stdout());
-    builder
-        .event_format(format.pretty())
-        .with_writer(non_blocking)
-        .with_ansi(true)
+        Some(
+            tracing_subscriber::fmt::layer()
+                .event_format(format)
+                .with_writer(file_non_blocking)
+                .with_ansi(false)
+                .with_filter(log_level),
+        )
+    } else {
+        None
+    };
+
+    // 4. 将 Layer 组合并注册至全局
+    tracing_subscriber::registry()
+        .with(log_level)
+        .with(stdout_layer)
+        .with(file_layer)
         .init();
-    // 转成静态, 保证一直有效. forget 不保证一直有效
-    Box::leak(Box::new(guard));
 }
