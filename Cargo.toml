@@ -37,6 +37,7 @@ regex = { version = "1.11.1", optional = true }
 parking_lot = { version = "0.12.5", optional = true }
 rand = { version = "0.9.1", optional = true }
 thiserror = { version = "2.0.17", optional = true }
+aes-gcm = { version = "0.11.0", optional = true }
 
 [features]
 default = ["zlog"]
@@ -47,7 +48,7 @@ serialize = ["serde", "serde_json", "paste", "rust_decimal"]
 session = ["reqwest", "reqwest_cookie_store", "cookie_store", "serde_json"]
 mq = ["amqprs", "base64", "log", "serde", "serde_json", "async-trait", "derive_builder"]
 mail = ["lettre", "derive_builder", "mime", "serde", "thiserror", "base64"]
-crypto = ["aes", "ecb", "cbc", "hex", "base64", "blake3"]
+crypto = ["aes", "ecb", "cbc", "hex", "base64", "blake3", "aes-gcm"]
 xls_reader = ["calamine", "regex"]
 sre_breaker = ["parking_lot", "derive_builder", "thiserror", "rand"]
 signal = ["tokio", "log"]

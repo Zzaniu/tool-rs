@@ -1,6 +1,11 @@
+pub use aes;
+pub use aes_gcm as raw_aes_gcm;
 pub use base64;
 pub use blake3;
+pub use cbc;
+pub use ecb;
 pub use hex;
 pub mod aes_cbc;
 pub mod aes_ecb;
+pub mod aes_gcm;
 pub mod hash_blake3;
