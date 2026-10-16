@@ -281,8 +281,8 @@ impl<'a> LogConfig<'a> {
         self
     }
 
-    pub fn max_files(mut self, max_files: Option<usize>) -> Self {
-        self.max_files = max_files;
+    pub fn max_files(mut self, max_files: usize) -> Self {
+        self.max_files = Some(max_files);
         self
     }
 }
