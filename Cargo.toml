@@ -6,7 +6,7 @@ edition = "2024"
 
 [dependencies]
 anyhow = "1.0.100"
-tokio = { version = "1.52.0", features = ["signal", "macros"], optional = true }
+tokio = { version = "1.52.0", features = ["signal", "macros", "sync", "time"], optional = true }
 serde = { version = "1.0.228", features = ["derive"], optional = true }
 serde_json = { version = "1.0.149", optional = true }
 tracing = { version = "0.1.44", optional = true }
@@ -14,7 +14,8 @@ tracing-subscriber = { version = "0.3.22", optional = true }
 tracing-appender = { version = "0.2.4", optional = true }
 sqlx = { version = "0.8.6", features = ["runtime-tokio-rustls", "mysql"], optional = true }
 chrono = { version = "0.4.42", optional = true }
-amqprs = { version = "2.1.3", optional = true }
+amqprs = { version = "2.1.5", optional = true }
+lapin = { version = "4.12", default-features = false, features = ["tokio", "rustls", "rustls-native-certs"], optional = true }
 base64 = { version = "0.22.1", optional = true }
 async-trait = { version = "0.1.89", optional = true }
 log = { version = "0.4.29", optional = true }
@@ -49,12 +50,13 @@ tempfile = "3"
 
 [features]
 default = ["zlog"]
-full = ["zlog", "database", "serialize", "session", "mq", "crypto", "mail", "zip", "xls_reader", "sre_breaker", "signal"]
+full = ["zlog", "database", "serialize", "session", "mq", "rabbitmq", "crypto", "mail", "zip", "xls_reader", "sre_breaker", "signal"]
 zlog = ["log", "tracing", "tracing-subscriber", "tracing-appender", "chrono"]
 database = ["sqlx", "log", "derive_builder", "serde"]
 serialize = ["serde", "serde_json", "paste", "rust_decimal"]
 session = ["reqwest", "reqwest_cookie_store", "cookie_store", "serde_json"]
-mq = ["amqprs", "base64", "log", "serde", "serde_json", "async-trait", "derive_builder"]
+mq = ["amqprs", "base64", "log", "serde", "serde_json", "async-trait", "derive_builder", "thiserror", "tokio"]
+rabbitmq = ["lapin", "tokio", "serde", "serde_json", "thiserror", "base64", "derive_builder"]
 mail = ["lettre", "derive_builder", "mime", "serde", "thiserror", "base64"]
 crypto = ["aes", "ecb", "cbc", "hex", "base64", "blake3", "aes-gcm", "hmac", "sha2", "uuid", "url", "http"]
 xls_reader = ["calamine", "regex"]

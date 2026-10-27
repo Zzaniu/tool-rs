@@ -1,4 +1,5 @@
 use super::rabbitmq;
+use super::v2::{RabbitMqPublishError, RabbitMqPublisher};
 use crate::error_caused_str;
 use crate::mq::rabbitmq::rabbitmq::{RabbitMqConnectInfo, RabbitMqConnectInfoBuilder};
 use amqprs::channel::{BasicPublishArguments, Channel};
@@ -8,6 +9,9 @@ use anyhow::{Result as AnyResult, anyhow};
 use base64::{Engine as _, engine::general_purpose};
 use derive_builder::Builder;
 use log::info;
+
+const MAIL_EXCHANGE: &str = "better";
+const MAIL_ROUTING_KEY: &str = "better_mail";
 
 #[derive(serde::Serialize)]
 pub struct MailInfo<'a> {
@@ -98,19 +102,44 @@ impl<'a> Mail<'a> {
     }
 }
 
+/// 使用旧版 RabbitMQ channel 发布邮件。
+///
+/// 返回 `Ok(())` 只表示消息已加入 amqprs 客户端的发送队列；该接口不会等待
+/// RabbitMQ Publisher Confirm，且 `mandatory` 默认为 `false`，因此不可路由消息
+/// 可能被 broker 丢弃。需要确认 broker 已接手消息时，请使用 [`send_mail_v2`]。
+/// 即使 channel 启用了 confirm，也不会在本函数中等待或关联 ACK/NACK。
+#[deprecated(note = "本接口不等待 broker 确认；请使用 send_mail_v2 确认消息发布结果")]
 pub async fn send_mail(rabbitmq_channel: &Channel, mail: &MailInfo<'_>) -> AnyResult<()> {
     // DELIVERY_MODE_PERSISTENT: 这个消息是持久化的, 不会随着重启而丢弃, 前提是队列和交换机都是持久化的
     let basic_properties = BasicProperties::default()
         .with_delivery_mode(DELIVERY_MODE_PERSISTENT)
         .finish();
-    let arguments = BasicPublishArguments::new("better", "better_mail");
+    let arguments = BasicPublishArguments::new(MAIL_EXCHANGE, MAIL_ROUTING_KEY);
     let content = serde_json::to_vec(mail)?;
     rabbitmq_channel
         .basic_publish(basic_properties, content, arguments)
         .await
         .map_err(|err| anyhow!("发送邮件失败, err = {}", error_caused_str(&err)))?;
-    info!("publish mail message success");
+    info!("邮件消息已加入客户端发送队列，尚未等待 broker 确认");
     Ok(())
+}
+
+/// 使用 V2 publisher 发送邮件。
+///
+/// V2 默认收到 RabbitMQ ACK 即成功；如果 publisher 使用
+/// `PublishSuccessMode::RoutedToQueue`，则还会要求消息至少路由到一个队列。
+pub async fn send_mail_v2(
+    publisher: &RabbitMqPublisher,
+    mail: &MailInfo<'_>,
+) -> Result<(), RabbitMqPublishError> {
+    let basic_properties = BasicProperties::default()
+        .with_delivery_mode(DELIVERY_MODE_PERSISTENT)
+        .finish();
+    let arguments = BasicPublishArguments::new(MAIL_EXCHANGE, MAIL_ROUTING_KEY);
+    let content = serde_json::to_vec(mail).map_err(RabbitMqPublishError::from)?;
+    publisher
+        .publish(basic_properties, content, arguments)
+        .await
 }
 
 pub async fn get_mail_rabbitmq_conn(

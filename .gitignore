@@ -22,3 +22,5 @@ Cargo.lock
 *test*
 logs
 AGENTS.md
+.pi
+docs

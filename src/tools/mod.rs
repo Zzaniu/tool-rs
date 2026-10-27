@@ -8,6 +8,8 @@ pub mod log;
 pub mod mail;
 #[cfg(feature = "mq")]
 pub mod mq;
+#[cfg(feature = "rabbitmq")]
+pub mod rabbitmq;
 #[cfg(feature = "serialize")]
 pub mod serialize;
 #[cfg(feature = "session")]

@@ -1,10 +1,10 @@
-use anyhow::{anyhow, Result as AnyResult};
+use anyhow::{Result as AnyResult, anyhow};
 use base64::Engine;
 use derive_builder::Builder;
 use lettre::message::header::ContentType;
 use lettre::message::{Attachment, Mailbox, MessageBuilder, MultiPart, SinglePart};
-use lettre::transport::smtp::authentication::Credentials;
 use lettre::transport::smtp::PoolConfig;
+use lettre::transport::smtp::authentication::Credentials;
 use lettre::{Address, AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor};
 use serde::{Deserialize, Deserializer};
 use std::hash::{DefaultHasher, Hash, Hasher};

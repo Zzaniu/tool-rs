@@ -135,6 +135,11 @@ pub async fn new_channel_with_consume(
     new_channel(connection, false).await
 }
 
+/// 创建启用 Publisher Confirm 的旧版 channel。
+///
+/// 默认回调不会将 ACK/NACK 关联到具体的发布调用，仅调用 basic_publish
+/// 或旧版 send_mail 仍不能确认 broker 已接手消息。需要等待发布结果时，
+/// 请使用 [`super::v2::RabbitMqPublisher`]。
 pub async fn new_channel_with_publish(
     connection: &Connection,
 ) -> Result<Channel, amqprs::error::Error> {
